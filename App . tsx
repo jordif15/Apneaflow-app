@@ -1,0 +1,255 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextInput, Switch } from 'react-native';
+// Nota: En un proyecto real, instalaríamos estas librerías
+// import { BarChart, LineChart } from 'react-native-chart-kit';
+// import { Settings, BarChart3, Wind, Droplets, Award, Target, Play, Pause, Repeat, Coffee, Waves, CheckCircle } from 'lucide-react-native';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// --- ARQUITECTURA: INTRODUCIENDO TYPESCRIPT ---
+// Definimos las "formas" de nuestros datos para mayor seguridad y claridad.
+interface Workout {
+  id: string;
+  title: string;
+  type: 'CO2' | 'O2' | 'WATER';
+  isPro: boolean;
+  rounds: number;
+  holds: number[];
+  rests: number[];
+}
+
+interface UserSettings {
+  userPB: number;
+  isProMode: boolean;
+  playMusic: boolean;
+}
+
+// --- ARQUITECTURA: SIMULACIÓN DE UN CUSTOM HOOK Y STATE MANAGEMENT (ZUSTAND) ---
+// En una app real, esto estaría en archivos separados (e.g., /hooks/useApneaLogic.ts)
+const useApneaStore = () => {
+    // Este hook simula un store de Zustand. Contiene toda la lógica de negocio.
+    const [settings, setSettings] = useState<UserSettings>({ userPB: 95, isProMode: true, playMusic: true });
+    const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
+    
+    useEffect(() => {
+        // Lógica para generar el workout del día
+        const { userPB, isProMode } = settings;
+        // Simulación de alternancia
+        const workoutType = new Date().getDate() % 2 === 0 ? 'CO2' : 'O2';
+        
+        if (workoutType === 'CO2') {
+             setCurrentWorkout({
+                id: 'co2_pro', title: 'Tolerancia al CO₂ (Pro)', type: 'CO2', isPro: true, rounds: 8,
+                holds: Array(8).fill(Math.floor(userPB * 0.6)),
+                rests: [120, 105, 90, 75, 60, 60, 60, 60],
+             });
+        } else {
+            setCurrentWorkout({
+                id: 'o2_pro', title: 'Tabla Estática O₂ (Pro)', type: 'O2', isPro: true, rounds: 6,
+                holds: [Math.floor(userPB * 0.8), Math.floor(userPB * 0.9), userPB, Math.floor(userPB * 1.05)],
+                rests: [120, 120, 120, 120],
+            });
+        }
+    }, [settings]);
+
+    return { settings, currentWorkout };
+};
+
+
+// --- UI/UX: COMPONENTES REDISEÑADOS ---
+
+const WeeklyProgressRing = () => (
+    <View style={styles.progressRingContainer}>
+        <View style={styles.progressRing}>
+            <Text style={styles.progressRingText}>4/7</Text>
+        </View>
+        <Text style={styles.progressRingLabel}>Entrenos esta semana</Text>
+    </View>
+);
+
+const WorkoutCarouselCard = ({ title, type, description, onPress }) => (
+    <TouchableOpacity style={[styles.carouselCard, type === 'WATER' ? styles.carouselCardWater : {}]} onPress={onPress}>
+        <Text style={styles.carouselCardType}>{type === 'DRY' ? 'EN SECO' : 'EN AGUA'}</Text>
+        <Text style={styles.carouselCardTitle}>{title}</Text>
+        <Text style={styles.carouselCardDescription}>{description}</Text>
+    </TouchableOpacity>
+);
+
+// --- PANTALLA PRINCIPAL (DASHBOARD) REDISEÑADA ---
+const DashboardScreen = () => {
+    const { settings, currentWorkout } = useApneaStore();
+
+    if (!currentWorkout) {
+        return <View style={styles.container}><Text style={styles.header}>Cargando...</Text></View>;
+    }
+
+    return (
+        <ScrollView style={styles.container}>
+            <View style={styles.headerContainer}>
+                <View>
+                    <Text style={styles.header}>Hola,</Text>
+                    <Text style={[styles.header, {color: '#81A1C1'}]}>Apneísta</Text>
+                </View>
+                {/* Icono de Ajustes */}
+            </View>
+            
+            <WeeklyProgressRing />
+
+            <Text style={styles.sectionHeader}>Hoy para ti</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carousel}>
+                <WorkoutCarouselCard 
+                    title={currentWorkout.title}
+                    type="DRY"
+                    description={`${currentWorkout.rounds} rondas para mejorar tu PB`}
+                    onPress={() => {}}
+                />
+                <WorkoutCarouselCard 
+                    title="Rondas de Inmersión"
+                    type="WATER"
+                    description="Técnica y relajación en el agua"
+                    onPress={() => {}}
+                />
+            </ScrollView>
+            
+            <View style={styles.statsPreview}>
+                <Text style={styles.sectionHeader}>Tu Progreso</Text>
+                <View style={styles.statsRow}>
+                    <Text style={styles.statItem}>PB Actual: {settings.userPB}s</Text>
+                    <Text style={styles.statItem}>Sesiones Totales: 23</Text>
+                </View>
+                {/* Aquí iría un mini-gráfico */}
+            </View>
+        </ScrollView>
+    );
+};
+
+
+export default function App() {
+    // El componente App ahora es mucho más simple.
+    // Solo se encarga de la navegación principal.
+    // Toda la lógica está en el "store" (simulado por el hook).
+    return <DashboardScreen />;
+}
+
+
+// --- UI/UX: PALETA DE COLORES Y ESTILOS REFINADOS ---
+const COLORS = {
+    abyssBlue: '#2E3440',    // Fondo
+    polarNight: '#3B4252',   // Tarjetas y elementos secundarios
+    frostGreen: '#8FBCBB',   // Acento principal (Verde Alga)
+    auroraBlue: '#81A1C1',   // Acento secundario (Azul Neón)
+    snowStorm: '#E5E9F0',    // Texto principal (Blanco Coral)
+    moonlight: '#D8DEE9',    // Texto secundario
+    auroraRed: '#BF616A',    // Rojo Emergencia
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.abyssBlue,
+        paddingTop: 60,
+    },
+    headerContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 25,
+        marginBottom: 30,
+    },
+    header: {
+        fontSize: 36,
+        fontWeight: 'bold',
+        color: COLORS.snowStorm,
+        fontFamily: 'Poppins-Bold', // Usaríamos una fuente custom
+    },
+    sectionHeader: {
+        fontSize: 22,
+        fontWeight: '600',
+        color: COLORS.moonlight,
+        paddingHorizontal: 25,
+        marginBottom: 20,
+        fontFamily: 'Poppins-SemiBold',
+    },
+    // Estilos del Anillo de Progreso
+    progressRingContainer: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    progressRing: {
+        width: 180,
+        height: 180,
+        borderRadius: 90,
+        borderWidth: 15,
+        borderColor: COLORS.polarNight,
+        // La parte verde se dibujaría con SVG o una librería de gráficos
+        borderTopColor: COLORS.frostGreen, 
+        transform: [{ rotate: '-45deg' }],
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    progressRingText: {
+        transform: [{ rotate: '45deg' }],
+        color: COLORS.snowStorm,
+        fontSize: 40,
+        fontWeight: 'bold',
+        fontFamily: 'Poppins-Bold',
+    },
+    progressRingLabel: {
+        color: COLORS.moonlight,
+        fontSize: 16,
+        marginTop: 15,
+        fontFamily: 'Poppins-Regular',
+    },
+    // Estilos del Carrusel
+    carousel: {
+        paddingLeft: 25,
+        marginBottom: 40,
+    },
+    carouselCard: {
+        backgroundColor: COLORS.polarNight,
+        borderRadius: 24,
+        padding: 25,
+        width: Dimensions.get('window').width * 0.7,
+        marginRight: 20,
+        justifyContent: 'space-between',
+    },
+    carouselCardWater: {
+        backgroundColor: '#434C5E', // Un azul un poco más claro
+    },
+    carouselCardType: {
+        color: COLORS.frostGreen,
+        fontSize: 14,
+        fontWeight: 'bold',
+        fontFamily: 'Poppins-Bold',
+        letterSpacing: 1,
+    },
+    carouselCardTitle: {
+        color: COLORS.snowStorm,
+        fontSize: 24,
+        fontWeight: '600',
+        fontFamily: 'Poppins-SemiBold',
+        marginTop: 10,
+    },
+    carouselCardDescription: {
+        color: COLORS.moonlight,
+        fontSize: 16,
+        fontFamily: 'Poppins-Regular',
+        marginTop: 5,
+    },
+    // Estilos de la preview de stats
+    statsPreview: {
+        backgroundColor: COLORS.polarNight,
+        marginHorizontal: 25,
+        borderRadius: 24,
+        padding: 25,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    statItem: {
+        color: COLORS.snowStorm,
+        fontSize: 16,
+        fontFamily: 'Poppins-Regular',
+    }
+});
+
